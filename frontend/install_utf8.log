@@ -1,0 +1,14 @@
+﻿npm.cmd : npm verbose cli C:\Program Files\nodejs\node.exe 
+C:\Users\tulas\AppData\Roaming\npm\node_modules\npm\bin\npm-cli.js
+At line:1 char:1
++ npm.cmd install --verbose > install.log 2>&1
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (npm verbose cli...\bin\npm-cli.js:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+npm info using npm@11.9.0
+npm info using node@v22.12.0
+npm verbose title npm install
+npm verbose argv "install" "--loglevel" "verbose"
+npm verbose logfile logs-max:10 dir:C:\Users\tulas\AppData\Local\npm-cache\_logs\2026-09-22T15_59_24_374Z-
+npm verbose logfile C:\Users\tulas\AppData\Local\npm-cache\_logs\2026-09-22T15_59_24_374Z-debug-0.log

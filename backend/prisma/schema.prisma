@@ -1,0 +1,49 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String     @id @default(uuid())
+  name         String
+  email        String     @unique
+  passwordHash String
+  referralCode String     @unique
+  createdAt    DateTime   @default(now())
+
+  // Relations
+  referralsMade     Referral[] @relation("ReferrerRelation")
+  referralsReceived Referral[] @relation("RefereeRelation")
+  rewards           Reward[]
+}
+
+model Referral {
+  id         String   @id @default(uuid())
+  referrerId String
+  refereeId  String
+  status     String   @default("PENDING") // PENDING, COMPLETED, FLAGGED
+  createdAt  DateTime @default(now())
+
+  // Relations
+  referrer User @relation("ReferrerRelation", fields: [referrerId], references: [id])
+  referee  User @relation("RefereeRelation", fields: [refereeId], references: [id])
+}
+
+model Reward {
+  id             String   @id @default(uuid())
+  userId         String
+  voucherCode    String   @unique
+  discountAmount Float
+  isRedeemed     Boolean  @default(false)
+  createdAt      DateTime @default(now())
+
+  // Relations
+  user User @relation(fields: [userId], references: [id])
+}
