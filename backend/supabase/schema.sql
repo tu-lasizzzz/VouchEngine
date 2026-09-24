@@ -5,9 +5,24 @@ CREATE TABLE IF NOT EXISTS public.users (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
   email TEXT UNIQUE NOT NULL,
+  password_hash TEXT NOT NULL,
   referral_code TEXT UNIQUE NOT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Migration: add password_hash if the table already exists
+-- (safe to run repeatedly – will no-op if column exists)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name   = 'users'
+      AND column_name  = 'password_hash'
+  ) THEN
+    ALTER TABLE public.users ADD COLUMN password_hash TEXT NOT NULL DEFAULT '';
+  END IF;
+END $$;
 
 -- 2. Create Referrals Table
 CREATE TABLE IF NOT EXISTS public.referrals (
