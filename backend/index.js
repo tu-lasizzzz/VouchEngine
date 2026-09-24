@@ -1,14 +1,24 @@
 require('dotenv').config();
-const express = require('express');
-const cors = require('cors');
-const supabase = require('./config/supabase');
+const express      = require('express');
+const cors         = require('cors');
+const cookieParser = require('cookie-parser');
+const supabase     = require('./config/supabase');
 const { generateReferralCode } = require('./utils/codeGenerator');
+const { referralTracker, getRefSourceFromCookie } = require('./middleware/referralTracker');
+const { sendWelcomeEmail, sendVoucherNotification } = require('./services/emailService');
+const authRoutes = require('./routes/auth');
 
-const app = express();
+const app  = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(cors());
+// ─── Global Middleware ────────────────────────────────────────────────────────
+app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
+app.use(cookieParser());
+app.use(referralTracker);   // captures ?ref=CODE → HTTP-only cookie
+
+// ─── Route Modules ────────────────────────────────────────────────────────────
+app.use('/api/auth', authRoutes);
 
 /**
  * Health Check Endpoint
@@ -46,15 +56,20 @@ app.get('/api/health', async (req, res) => {
 });
 
 /**
- * Register User Endpoint
- * Auto-generates a unique 7-character referral code upon user creation.
+ * @deprecated Use POST /api/auth/register instead.
+ *
+ * Legacy Register User Endpoint (kept for backward compatibility).
+ * Does NOT require a password and does NOT return a JWT.
  */
 app.post('/api/users/register', async (req, res) => {
-  const { name, email, referrer_code } = req.body;
+  const { name, email, referrer_code: bodyRefCode } = req.body;
 
   if (!name || !email) {
     return res.status(400).json({ error: 'Name and email are required' });
   }
+
+  // Resolve referral attribution: body param takes precedence over cookie
+  const referrer_code = bodyRefCode || getRefSourceFromCookie(req);
 
   try {
     // Auto-generate 7-character referral code
@@ -71,11 +86,11 @@ app.post('/api/users/register', async (req, res) => {
       return res.status(400).json({ error: userError.message });
     }
 
-    // Handle referrer if referral_code was provided
+    // Handle referrer attribution
     if (referrer_code) {
       const { data: referrer } = await supabase
         .from('users')
-        .select('id')
+        .select('id, name, email')
         .eq('referral_code', referrer_code)
         .single();
 
@@ -88,9 +103,22 @@ app.post('/api/users/register', async (req, res) => {
       }
     }
 
+    // Fire-and-forget: send the Welcome Email with the new user's referral link
+    sendWelcomeEmail({
+      name:          user.name,
+      email:         user.email,
+      referral_code: user.referral_code,
+    }).catch((err) => console.error('Welcome email fire-and-forget error:', err));
+
+    // Clear the tracking cookie after successful attribution
+    if (getRefSourceFromCookie(req)) {
+      res.clearCookie('ref_source', { path: '/' });
+    }
+
     return res.status(201).json({
       message: 'User registered successfully',
-      user
+      user,
+      referral_attributed: !!referrer_code,
     });
   } catch (err) {
     return res.status(500).json({ error: err.message });
