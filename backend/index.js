@@ -6,7 +6,9 @@ const supabase     = require('./config/supabase');
 const { generateReferralCode } = require('./utils/codeGenerator');
 const { referralTracker, getRefSourceFromCookie } = require('./middleware/referralTracker');
 const { sendWelcomeEmail, sendVoucherNotification } = require('./services/emailService');
-const authRoutes = require('./routes/auth');
+const authRoutes    = require('./routes/auth');
+const actionRoutes  = require('./routes/actions');
+const userRoutes    = require('./routes/user');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -19,6 +21,8 @@ app.use(referralTracker);   // captures ?ref=CODE → HTTP-only cookie
 
 // ─── Route Modules ────────────────────────────────────────────────────────────
 app.use('/api/auth', authRoutes);
+app.use('/api/actions', actionRoutes);
+app.use('/api/user', userRoutes);
 
 /**
  * Health Check Endpoint
